@@ -1,0 +1,18 @@
+# Build
+build/
+dist/
+
+# Dependencies
+node_modules/
+
+# Frontend configs
+postcss.config.cjs
+tailwind.config.cjs
+vite.config.ts
+vite-env.d.ts
+
+# Test configs
+jest.config.ts
+
+# Declaration files
+env.d.ts
