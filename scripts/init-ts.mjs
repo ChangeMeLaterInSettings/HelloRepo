@@ -53,6 +53,8 @@ async function resolvePackageManager() {
             return choice;
         }
     }
+
+    throw new Error('🤯 No package manager was found. Do you have Node.js installed?');
 }
 
 /**
