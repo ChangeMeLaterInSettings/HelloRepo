@@ -49,7 +49,7 @@ async function resolvePackageManager() {
 
     for (const choice of choices) {
         if ((await exec(`which ${choice.name}`)) === 0) {
-            console.info(`🛠️ Using ${choice.name} as the package manager...`)
+            console.info(`🛠️ Using ${choice.name} as the package manager...\n`)
             return choice;
         }
     }
@@ -79,15 +79,13 @@ async function main() {
     const packages = [];
     
     /** @type {string | undefined} */
-    const framework = process.argv[2];
+    const framework = process.argv[2]?.toLowerCase();
 
     if (!await exists('package.json')) {
-        console.info('🙅🏽‍♂️ No package.json detected. Creating one...');
+        console.error('🙉 No package.json detected. Please initialize your project before proceeding.\n');
+        console.info('🎭 For frontend projects, try initializing the project using: `npx create-vite`');
 
-        await packageManager.init();
-        devPackages.push('typescript');
-
-        console.log('✅ Created package.json.\n');
+        process.exit(1);
     }
 
     devPackages.push(
@@ -111,7 +109,15 @@ async function main() {
                 'eslint-plugin-jsx-a11y',
                 'eslint-plugin-solid',
             );
-            packages.push('solid-js');
+        }
+
+        if (framework === 'react') {
+            source = './configs/eslint/.eslintrc.react.cjs';
+            devPackages.push(
+                'eslint-plugin-jsx-a11y',
+                'eslint-plugin-react',
+                'eslint-plugin-react-hooks',
+            );
         }
 
         await fs.copyFile(source, '.eslintrc.cjs');
