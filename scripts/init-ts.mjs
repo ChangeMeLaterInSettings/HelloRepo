@@ -16,21 +16,18 @@ function exec(command) {
 /**
  * @typedef {{
 *  name: string,
-*  init: () => Promise<number | null>,
 *  install: (packages: string[], installAsDevDependency?: boolean) => Promise<number | null>,
 * }} PackageManager
 */
 
 /**
  * @param {string} name
- * @param {string} init
  * @param {string} install
  * @returns {PackageManager}
  */
-function PackageManager(name, init, install) {
+function PackageManager(name, install) {
     return {
         name,
-        init: () => exec(`${name} ${init}`),
         install: (packages, installAsDevDependency = true) => installAsDevDependency
             ? exec(`${name} ${install} -D ${packages.join(' ')}`)
             : exec(`${name} ${install} ${packages.join(' ')}`),
@@ -42,9 +39,9 @@ function PackageManager(name, init, install) {
  */
 async function resolvePackageManager() {
     const choices = [
-        {name: 'pnpm', init: async () => exec('pnpm init'), install: async (packages) => exec(`pnpm add ${packages.join(' ')}`)},
-        {name: 'yarn', init: async () => exec('yarn init -y'), install: 'add'},
-        {name: 'npm', init: async () => exec('npm init -y'), install: 'i'},
+        PackageManager('pnpm', 'add'),
+        PackageManager('yarn', 'add'),
+        PackageManager('npm', 'i'),
     ];
 
     for (const choice of choices) {
@@ -135,8 +132,28 @@ async function main() {
         console.log('✅ Copied .eslintignore.\n');
     }
 
-    await packageManager.install(devPackages);
-    await packageManager.install(packages, false);
+    if (devPackages.length > 0) {
+        console.info('📦 Installing development packages...');
+        await packageManager.install(devPackages);
+    
+        console.info('✅ Installed:');
+        for (const pkg of devPackages) {
+            console.info('\t-', pkg);
+        }
+    }
+
+    if (packages.length > 0) {
+        console.info('📦 Installing development packages...');
+        await packageManager.install(packages, false);
+
+        console.info('✅ Installed:\n');
+    
+        for (const pkg of [...packages, ...devPackages]) {
+            console.info('\t-', pkg);
+        }
+    }
+
+    console.info('\n🎉 Done!');
 }
 
 main().then();
