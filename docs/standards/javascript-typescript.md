@@ -45,9 +45,9 @@ When possible, aliasing should be used to make import paths nicer. These will be
 // tsconfig.json
 {
     "paths": {
+        "~/*": ["./*"],
         "!/*": ["./__tests__/*"],
         "@/*": ["./src/*"],
-        "@mocks/*": ["./__mocks__/*"]
     }
 }
 ```
@@ -64,7 +64,7 @@ Each group should be separated with a newline, and its members listed in alphanu
 3. 3rd party packages
 4. **Path Alias (`~`)**: Imports from the project root (starts with `~`)
 5. **Path Alias (`!`)**: Imports from the testing directory that (starts with `!`)
-6. **Path Alias (`!`)**: Imports from the `src` directory that (starts with `@`)
+6. **Path Alias (`@`)**: Imports from the `src` directory that (starts with `@`)
 7. Absolute imports, relative imports, and other imports not matched in the groups listed above.
 
 ```ts
@@ -125,10 +125,10 @@ If the component needs another file, such as a stylesheet or is composed of othe
 An example of this is as follows:
 
 ```ts
-// `index.ts`
+// `src/components/PageScroller/index.ts`
 import PageScroller from '@/components/PageScroller';
 
-export PageScroller;
+export default PageScroller;
 
 //
 
