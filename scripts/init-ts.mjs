@@ -1,5 +1,6 @@
 import {exec as nodeExec} from 'node:child_process';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 /**
  * @param {string} command
@@ -31,7 +32,7 @@ function PackageManager(name, install) {
         install: (packages, installAsDevDependency = true) => installAsDevDependency
             ? exec(`${name} ${install} -D ${packages.join(' ')}`)
             : exec(`${name} ${install} ${packages.join(' ')}`),
-    }
+    };
 }
 
 /**
@@ -46,12 +47,12 @@ async function resolvePackageManager() {
 
     for (const choice of choices) {
         if ((await exec(`which ${choice.name}`)) === 0) {
-            console.info(`🛠️ Using ${choice.name} as the package manager...\n`)
+            console.info(`🛠️ Using ${choice.name} as the package manager...`);
             return choice;
         }
     }
 
-    throw new Error('🤯 No package manager was found. Do you have Node.js installed?');
+    throw new Error('😵 No package manager was found. Do you have Node.js installed?');
 }
 
 /**
@@ -68,9 +69,80 @@ async function exists(path) {
 }
 
 /**
+ * @param {string} configFolderName
+ * @param {Array<{name: string; files: string[]}>} subconfigFolders
+ * @returns {Promise<boolean>}
+ */
+async function isConfigFolderValid(configFolderName, subconfigFolders) {
+    if (!(await exists(configFolderName)) || !(await fs.lstat(configFolderName)).isDirectory()) {
+        console.error(
+            '😵 No `config` folder was found.\n', 
+            'Please make sure to run this script from the root of your project.',
+        );
+        console.error('Current Working Directory:', process.cwd());
+
+        return false;
+    }
+
+    let didSubfoldersError = false;
+    for (const folder of subconfigFolders) {
+        let didSubfolderError = false;
+
+        const folderPath = path.join(configFolderName, folder.name);
+        if (!(await exists(folderPath)) || !(await fs.lstat(folderPath)).isDirectory()) {
+            console.error(
+                `❌ The \`${configFolderName}\` folder is missing a \`${folder.name}\` folder.`,
+            );
+
+            didSubfoldersError = true;
+            didSubfolderError = true;
+        }
+
+        if (!didSubfolderError) {
+            for (const file of folder.files) {
+                const filePath = path.join(folderPath, file);
+                if (!(await exists(filePath))) {
+                    console.error(`❌ The \`${folder.name}\` config folder is missing \`${file}\`.`);
+    
+                    didSubfoldersError = true;
+                }
+            }
+        }
+    }
+
+    if (didSubfoldersError) {
+        console.error(`😵 Please update your project with the proper files.`);
+    }    
+
+    return !didSubfoldersError;
+}
+
+/**
  * @returns {Promise<void>}
  */
 async function main() {
+    const configFolder = 'configs';
+    const eslintFolder = 'eslint';
+
+    if (!(await isConfigFolderValid(
+        configFolder, 
+        [
+            {
+                name: 'eslint', 
+                files: [
+                    '.eslintrc.cjs',
+                    '.eslintrc.react.cjs',
+                    '.eslintrc.solid.cjs',
+                    '.eslintignore',
+                ],
+            },
+        ],
+    ))) {
+        process.exit(1);
+    }
+
+    const configEslintFolder = path.join(configFolder, eslintFolder);
+
     const packageManager = await resolvePackageManager();
     /** @type {string[]} */
     const devPackages = [];
@@ -80,9 +152,19 @@ async function main() {
     /** @type {string | undefined} */
     const framework = process.argv[2]?.toLowerCase();
 
+    if (framework !== undefined) {
+        console.info('... and', framework, 'as your framework...');
+    }
+
+    console.info('');
+
     if (!await exists('package.json')) {
-        console.error('🙉 No package.json detected. Please initialize your project before proceeding.\n');
-        console.info('🎭 For frontend projects, try initializing the project using: `npx create-vite`');
+        console.error(
+            '🙉 No package.json detected. Please initialize your project before proceeding.\n',
+        );
+        console.info(
+            '🎭 For frontend projects, try initializing the project using: `npx create-vite`',
+        );
 
         process.exit(1);
     }
@@ -100,10 +182,10 @@ async function main() {
     if (!await exists('.eslintrc.cjs')) {
         console.info('🙅🏽‍♂️ No .eslintrc.cjs detected. Copying one...');
 
-        let source = './configs/eslint/.eslintrc.cjs';
+        let source = path.resolve(configEslintFolder, '.eslintrc.cjs');
 
         if (framework === 'solid') {
-            source = './configs/eslint/.eslintrc.solid.cjs';
+            source = path.resolve(configEslintFolder, '.eslintrc.solid.cjs');
             devPackages.push(
                 'eslint-plugin-jsx-a11y',
                 'eslint-plugin-solid',
@@ -111,7 +193,7 @@ async function main() {
         }
 
         if (framework === 'react') {
-            source = './configs/eslint/.eslintrc.react.cjs';
+            source = path.resolve(configEslintFolder, '.eslintrc.react.cjs');
             devPackages.push(
                 'eslint-plugin-jsx-a11y',
                 'eslint-plugin-react',
@@ -127,7 +209,10 @@ async function main() {
     if (!await exists('.eslintignore')) {
         console.info('🙅🏽‍♂️ No .eslintignore detected. Copying one...');
 
-        await fs.copyFile('./configs/eslint/.eslintignore', '.eslintignore');
+        await fs.copyFile(
+            path.resolve(configEslintFolder, '.eslintignore'),
+            '.eslintignore',
+        );
 
         console.log('✅ Copied .eslintignore.\n');
     }
@@ -138,7 +223,7 @@ async function main() {
     
         console.info('✅ Installed:');
         for (const pkg of devPackages) {
-            console.info('\t-', pkg);
+            console.info('  -', pkg);
         }
     }
 
@@ -148,8 +233,8 @@ async function main() {
 
         console.info('✅ Installed:\n');
     
-        for (const pkg of [...packages, ...devPackages]) {
-            console.info('\t-', pkg);
+        for (const pkg of packages) {
+            console.info('  -', pkg);
         }
     }
 
